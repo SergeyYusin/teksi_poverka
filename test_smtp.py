@@ -1,5 +1,5 @@
 import smtplib
-import ssl
+import sslr
 from email.message import EmailMessage
 import os
 from dotenv import load_dotenv

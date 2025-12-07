@@ -85,19 +85,29 @@ def delete_order():
     return jsonify({'success': True})
 
 
+# В routes/api.py замените export_orders функцию:
 @api_bp.route('/export')
 def export_orders():
     if not check_auth():
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
-        output = export_to_excel()
+        # Попробуем использовать pandas
+        try:
+            from utils.exporters import export_to_excel
+            output = export_to_excel()
+            filename = f"заявки_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.xlsx"
+            mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        except ImportError:
+            # Если pandas не установлен, используем CSV
+            from utils.exporters_light import export_to_csv
+            output = export_to_csv()
+            filename = f"заявки_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.csv"
+            mimetype = 'text/csv'
 
-        # Отправляем файл
-        filename = f"заявки_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.xlsx"
         return send_file(
             output,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            mimetype=mimetype,
             as_attachment=True,
             download_name=filename
         )

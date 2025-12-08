@@ -1,6 +1,6 @@
+# routes/api.py
 from flask import Blueprint, request, jsonify, send_file
 from models.application import Application, ApplicationHistory
-from utils.exporters import export_to_excel
 from datetime import datetime
 
 api_bp = Blueprint('api', __name__)
@@ -85,31 +85,25 @@ def delete_order():
     return jsonify({'success': True})
 
 
-# В routes/api.py замените export_orders функцию:
 @api_bp.route('/export')
 def export_orders():
     if not check_auth():
         return jsonify({'error': 'Unauthorized'}), 403
 
     try:
-        # Попробуем использовать pandas
-        try:
-            from utils.exporters import export_to_excel
-            output = export_to_excel()
-            filename = f"заявки_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.xlsx"
-            mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        except ImportError:
-            # Если pandas не установлен, используем CSV
-            from utils.exporters_light import export_to_csv
-            output = export_to_csv()
-            filename = f"заявки_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.csv"
-            mimetype = 'text/csv'
+        # Используем CSV экспорт вместо Excel
+        from utils.exporters import export_to_csv
+        output = export_to_csv()
 
-        return send_file(
-            output,
-            mimetype=mimetype,
-            as_attachment=True,
-            download_name=filename
+        filename = f"applications_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.csv"
+
+        from flask import Response
+        return Response(
+            output.getvalue() if hasattr(output, 'getvalue') else output,
+            mimetype='text/csv; charset=utf-8',
+            headers={
+                'Content-Disposition': f'attachment; filename={filename}'
+            }
         )
 
     except Exception as e:

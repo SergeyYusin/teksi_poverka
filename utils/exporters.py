@@ -1,73 +1,101 @@
-import pandas as pd
-from io import BytesIO
-from models.application import Application
+# utils/exporters.py
+import csv
+from io import BytesIO, StringIO
+from datetime import datetime
 import json
+from models.application import Application
 
 
-def export_to_excel():
-    """Экспортирует заявки в Excel"""
+def export_to_csv():
+    """Экспортирует заявки в CSV с правильной кодировкой для Excel"""
 
     # Получаем все заявки
     orders = Application.get_all()
 
+    # Создаем CSV в памяти
+    output = StringIO()
+
+    # Добавляем BOM для Excel (UTF-8 с BOM)
+    output.write('\ufeff')
+
+    writer = csv.writer(output, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+    # Заголовки с русскими символами
+    writer.writerow(['ID', 'ФИО', 'Телефон', 'Адрес', 'Услуги', 'Сумма', 'Статус', 'Дата создания', 'Комментарий'])
+
+    # Если нет заявок
     if not orders:
-        # Создаем пустой DataFrame
-        df = pd.DataFrame(
-            columns=['ID', 'ФИО', 'Телефон', 'Адрес', 'Комментарий', 'Услуги', 'Сумма', 'Статус', 'Дата создания'])
+        writer.writerow(['Нет данных', '', '', '', '', '', '', '', ''])
     else:
-        # Преобразуем в DataFrame
-        df = pd.DataFrame(orders)
-
-        # Переименовываем колонки
-        df = df.rename(columns={
-            'id': 'ID',
-            'full_name': 'ФИО',
-            'phone': 'Телефон',
-            'address': 'Адрес',
-            'comment': 'Комментарий',
-            'selected_works': 'Услуги',
-            'total_amount': 'Сумма',
-            'status': 'Статус',
-            'created_at': 'Дата создания'
-        })
-
-        # Обрабатываем JSON с услугами
-        def parse_works(works_json):
-            if not works_json:
-                return ''
+        # Данные
+        for order in orders:
+            # Обрабатываем услуги
+            works_text = ''
             try:
-                works = json.loads(works_json)
-                return '; '.join([f"{w.get('type', '')}: {w.get('quantity', 0)} {w.get('unit', '')}" for w in works])
-            except:
-                return works_json
+                works = json.loads(order['selected_works']) if order['selected_works'] else []
+                work_items = []
+                for w in works:
+                    work_type = w.get('type', '').replace(';', ',')
+                    quantity = w.get('quantity', 0)
+                    unit = w.get('unit', '').replace(';', ',')
+                    work_items.append(f"{work_type}: {quantity} {unit}")
+                works_text = ' | '.join(work_items)
+            except Exception as e:
+                works_text = str(order.get('selected_works', ''))
 
-        df['Услуги'] = df['Услуги'].apply(parse_works)
+            # Форматируем статус
+            status_map = {
+                'new': 'Новая',
+                'in_progress': 'В работе',
+                'completed': 'Выполнено',
+                'cancelled': 'Отменено'
+            }
+            status_text = status_map.get(order.get('status', ''), order.get('status', ''))
 
-        # Форматируем статусы
-        status_map = {
-            'new': 'Новая',
-            'in_progress': 'В работе',
-            'completed': 'Выполнено',
-            'cancelled': 'Отменено'
-        }
-        df['Статус'] = df['Статус'].map(status_map).fillna(df['Статус'])
+            # Получаем значения
+            full_name = order.get('full_name', '')
+            phone = order.get('phone', '')
+            address = order.get('address', '')
+            total_amount = order.get('total_amount', 0)
+            created_at = order.get('created_at', '')
+            comment = order.get('comment', '')
 
-    # Создаем Excel файл в памяти
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, sheet_name='Заявки', index=False)
+            # Экранируем строковые значения
+            def escape(value):
+                if value is None:
+                    return ''
+                value = str(value)
+                # Если значение содержит разделитель или кавычки
+                if ';' in value or '"' in value or '\n' in value:
+                    value = value.replace('"', '""')
+                    return f'"{value}"'
+                return value
 
-        # Добавляем лист со статистикой
-        stats = Application.get_stats()
-        stats_df = pd.DataFrame([{
-            'Всего заявок': stats.get('total', 0),
-            'Новые': stats.get('new_count', 0),
-            'В работе': stats.get('in_progress_count', 0),
-            'Выполнено': stats.get('completed_count', 0),
-            'Отменено': stats.get('cancelled_count', 0),
-            'Общая сумма': stats.get('total_amount', 0)
-        }])
-        stats_df.to_excel(writer, sheet_name='Статистика', index=False)
+            # Записываем строку
+            writer.writerow([
+                order.get('id', ''),
+                escape(full_name),
+                escape(phone),
+                escape(address),
+                escape(works_text),
+                total_amount,
+                escape(status_text),
+                escape(created_at),
+                escape(comment)
+            ])
 
-    output.seek(0)
-    return output
+    # Конвертируем в байты с UTF-8 BOM кодировкой
+    content = output.getvalue().encode('utf-8-sig')
+
+    # Создаем BytesIO объект
+    bytes_io = BytesIO()
+    bytes_io.write(content)
+    bytes_io.seek(0)
+
+    return bytes_io
+
+
+# Алиас для обратной совместимости
+def export_to_excel():
+    """Алиас для export_to_csv (для обратной совместимости)"""
+    return export_to_csv()

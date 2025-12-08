@@ -1,0 +1,10 @@
+# run.py
+from app import app
+from models.database import init_db
+
+if __name__ == '__main__':
+    # Инициализируем базу данных
+    init_db()
+
+    # Запускаем приложение
+    app.run(host='0.0.0.0', port=5000, debug=True)

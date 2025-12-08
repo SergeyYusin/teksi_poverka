@@ -69,7 +69,7 @@
                 </div>
 
                 <div class="actions-row">
-                    <a href="/admin/api/export?password={{ password }}" class="btn btn-success">
+                    <a href="/admin/export2?password={{ password }}" class="btn btn-success">
                         <i class="fas fa-file-excel"></i> Выгрузить в Excel
                     </a>
                     <a href="/admin/orders?password={{ password }}" class="btn btn-secondary">
@@ -111,6 +111,8 @@
                         <td><span class="status status-{{ order.status }}">{{ order.status_text }}</span></td>
                         <!-- templates/admin/orders.html - обновляем строку с действиями -->
 
+<!-- Замените весь блок action-buttons на этот: -->
+<!-- Замените текущий блок <td> с действиями на этот: -->
 <td>
     <div class="action-buttons">
         <button onclick="showDetails({{ order.id }})" class="btn btn-primary" title="Просмотр">
@@ -120,24 +122,12 @@
             <i class="fas fa-history"></i>
         </button>
 
-        <!-- Выпадающий список для изменения статуса -->
-        <div class="dropdown">
-            <button class="btn btn-warning dropdown-toggle" type="button"
-                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                    {% if order.status == 'cancelled' %}disabled{% endif %}>
-                <i class="fas fa-exchange-alt"></i> Изменить статус
-            </button>
-            <div class="dropdown-menu">
-                {% for status in status_options %}
-                    {% if status.value != order.status %}
-                        <a class="dropdown-item" href="#" onclick="changeStatus({{ order.id }}, '{{ status.value }}')">
-                            <span class="status-dot" style="background-color: {{ status.color }}"></span>
-                            {{ status.label }}
-                        </a>
-                    {% endif %}
-                {% endfor %}
-            </div>
-        </div>
+        <!-- Простая кнопка для изменения статуса -->
+        <button onclick="showStatusModal({{ order.id }})" class="btn btn-warning"
+                title="Изменить статус"
+                {% if order.status == 'cancelled' %}style="opacity:0.5;"{% endif %}>
+            <i class="fas fa-exchange-alt"></i>
+        </button>
 
         <!-- Кнопка удаления -->
         <button onclick="deleteOrder({{ order.id }})" class="btn btn-danger" title="Удалить">

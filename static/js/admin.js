@@ -248,3 +248,96 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
+// admin.js - основные функции админки
+
+// Показать детали заявки
+function showDetails(orderId) {
+    fetch(`/admin/api/order/${orderId}?password=${PASSWORD}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('modalOrderId').textContent = orderId;
+                document.getElementById('modalContent').innerHTML = `
+                    <div class="modal-body">
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <strong>ФИО:</strong> ${data.order.full_name}
+                            </div>
+                            <div class="info-item">
+                                <strong>Телефон:</strong> <a href="tel:${data.order.phone}">${data.order.phone}</a>
+                            </div>
+                            <div class="info-item">
+                                <strong>Адрес:</strong> ${data.order.address}
+                            </div>
+                            <div class="info-item">
+                                <strong>Дата:</strong> ${data.order.created_at}
+                            </div>
+                            <div class="info-item full-width">
+                                <strong>Услуги:</strong><br>
+                                ${data.order.works_html || 'Нет данных'}
+                            </div>
+                            <div class="info-item">
+                                <strong>Сумма:</strong> ${data.order.total_amount} ₽
+                            </div>
+                            <div class="info-item">
+                                <strong>Статус:</strong> <span class="status status-${data.order.status}">${data.order.status_text}</span>
+                            </div>
+                            <div class="info-item full-width">
+                                <strong>Комментарий:</strong><br>
+                                ${data.order.comment || 'Нет комментария'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                openModal('detailsModal');
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+// Показать историю изменений
+function showHistory(orderId) {
+    document.getElementById('historyOrderId').textContent = orderId;
+    document.getElementById('historyContent').innerHTML = '<p>Загрузка истории...</p>';
+    openModal('historyModal');
+
+    // Здесь можно добавить запрос к API для получения истории
+}
+
+// Удалить заявку
+function deleteOrder(orderId) {
+    if (confirm('Вы уверены, что хотите удалить эту заявку?')) {
+        fetch(`/admin/api/order/${orderId}?password=${PASSWORD}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById(`row-${orderId}`).remove();
+                alert('Заявка удалена!');
+            } else {
+                alert('Ошибка при удалении: ' + data.error);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+}
+
+// Модальные окна
+function openModal(modalId) {
+    document.getElementById(modalId).style.display = 'block';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+// Закрытие модальных окон при клике вне их
+window.onclick = function(event) {
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+};

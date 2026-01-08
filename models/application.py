@@ -155,6 +155,61 @@ class Application:
 
         return dict(stats) if stats else {}
 
+        # models/application.py - добавьте этот метод в класс Application
+
+# models/application.py - добавьте этот метод в класс Application
+
+    @staticmethod
+    def get_stats_with_filters(filters=None):
+        """Получает статистику по заявкам с учетом фильтров"""
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Базовый запрос
+        query = '''
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new_count,
+                SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_count,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_count,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_count,
+                SUM(total_amount) as total_amount
+            FROM applications
+            WHERE 1=1
+        '''
+        params = []
+
+        if filters:
+            if filters.get('status') and filters['status'] != 'all':
+                query += ' AND status = ?'
+                params.append(filters['status'])
+
+            if filters.get('search'):
+                query += ' AND (full_name LIKE ? OR phone LIKE ? OR address LIKE ?)'
+                search_term = f'%{filters["search"]}%'
+                params.extend([search_term, search_term, search_term])
+
+            if filters.get('date_from'):
+                query += ' AND DATE(created_at) >= ?'
+                params.append(filters['date_from'])
+
+            if filters.get('date_to'):
+                query += ' AND DATE(created_at) <= ?'
+                params.append(filters['date_to'])
+
+        cursor.execute(query, params)
+        stats = cursor.fetchone()
+        conn.close()
+
+        return dict(stats) if stats else {
+            'total': 0,
+            'new_count': 0,
+            'in_progress_count': 0,
+            'completed_count': 0,
+            'cancelled_count': 0,
+            'total_amount': 0
+        }
+
 
 class ApplicationHistory:
     @staticmethod

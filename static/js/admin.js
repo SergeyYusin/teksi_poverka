@@ -1,3 +1,123 @@
+// static/js/admin.js
+
+const PASSWORD = '{{ password }}' || window.PASSWORD;
+
+function getStatusText(status) {
+    const statuses = {
+        'new': 'Новая',
+        'in_progress': 'В работе',
+        'completed': 'Выполнено',
+        'cancelled': 'Отменено'
+    };
+    return statuses[status] || status;
+}
+
+function showDetails(orderId) {
+    fetch(`/admin/api/order/${orderId}?password=${PASSWORD}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                alert('Ошибка: ' + data.error);
+                return;
+            }
+
+            document.getElementById('modalOrderId').textContent = orderId;
+
+            // Форматируем данные для отображения
+            let html = `
+                <div class="order-details">
+                    <div class="detail-row">
+                        <strong>ФИО:</strong> ${data.full_name || ''}
+                    </div>
+                    <div class="detail-row">
+                        <strong>Телефон:</strong> <a href="tel:${data.phone || ''}">${data.phone || ''}</a>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Адрес:</strong> ${data.address || ''}
+                    </div>
+                    <div class="detail-row">
+                        <strong>Статус:</strong> <span class="status status-${data.status}">${data.status_text || getStatusText(data.status)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Сумма:</strong> ${data.total_amount || 0} ₽
+                    </div>
+                    <div class="detail-row">
+                        <strong>Дата создания:</strong> ${data.created_at || ''}
+                    </div>
+            `;
+
+            // Добавляем услуги, если есть
+            if (data.selected_works) {
+                try {
+                    const works = JSON.parse(data.selected_works);
+                    html += `<div class="detail-row"><strong>Услуги:</strong></div>`;
+                    works.forEach(work => {
+                        html += `<div class="work-item">• ${work.type || ''}: ${work.quantity || 0} ${work.unit || ''} (${work.price || 0} ₽ за ед.)</div>`;
+                    });
+                } catch (e) {
+                    html += `<div class="detail-row"><strong>Услуги:</strong> ${data.selected_works}</div>`;
+                }
+            }
+
+            // Добавляем комментарий, если есть
+            if (data.comment) {
+                html += `<div class="detail-row"><strong>Комментарий:</strong><br>${data.comment}</div>`;
+            }
+
+            html += `</div>`;
+
+            document.getElementById('modalContent').innerHTML = html;
+            document.getElementById('detailsModal').style.display = 'block';
+        })
+        .catch(error => {
+            alert('Ошибка загрузки данных: ' + error.message);
+            console.error('Error:', error);
+        });
+}
+
+function showHistory(orderId) {
+    fetch(`/admin/api/history/${orderId}?password=${PASSWORD}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(history => {
+            document.getElementById('historyOrderId').textContent = orderId;
+
+            let html = '<div class="history-list">';
+
+            if (history.length === 0) {
+                html += '<div class="history-empty">История изменений отсутствует</div>';
+            } else {
+                history.forEach(item => {
+                    html += `
+                        <div class="history-item">
+                            <div class="history-date">${item.created_at || ''}</div>
+                            <div class="history-action">${item.details || item.action || ''}</div>
+                            <div class="history-user">${item.changed_by || 'system'}</div>
+                        </div>
+                    `;
+                });
+            }
+
+            html += '</div>';
+
+            document.getElementById('historyContent').innerHTML = html;
+            document.getElementById('historyModal').style.display = 'block';
+        })
+        .catch(error => {
+            alert('Ошибка загрузки истории: ' + error.message);
+            console.error('Error:', error);
+        });
+}
+
 function showStatusModal(orderId, currentStatus) {
     const statuses = [
         { value: 'new', label: 'Новая', color: '#3498db', icon: '📋', desc: 'Новая заявка' },
@@ -43,7 +163,7 @@ function showStatusModal(orderId, currentStatus) {
 
 function selectStatus(status, orderId) {
     if (confirm(`Изменить статус заявки #${orderId} на "${getStatusText(status)}"?`)) {
-        fetch(`/admin/api/update-status`, {
+        fetch('/admin/api/update-status', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -68,121 +188,9 @@ function selectStatus(status, orderId) {
     }
 }
 
-
-
-function showDetails(orderId) {
-    fetch(`/admin/api/order/${orderId}?password=${PASSWORD}`)
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('modalOrderId').textContent = orderId;
-            let content = `
-                <div style="margin-bottom: 20px;">
-                    <h3>Контактная информация</h3>
-                    <p><strong>ФИО:</strong> ${data.full_name}</p>
-                    <p><strong>Телефон:</strong> <a href="tel:${data.phone}">${data.phone}</a></p>
-                    <p><strong>Адрес:</strong> ${data.address}</p>
-                    <p><strong>Дата создания:</strong> ${data.created_at}</p>
-                    <p><strong>Статус:</strong> <span class="status status-${data.status}">${getStatusText(data.status)}</span></p>
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                    <h3>Выбранные услуги</h3>
-                    <div id="worksList"></div>
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                    <h3>Комментарий</h3>
-                    <p style="background: #f8f9fa; padding: 15px; border-radius: 8px;">${data.comment || 'Нет комментария'}</p>
-                </div>
-
-                <div>
-                    <h3>Итоговая стоимость</h3>
-                    <p style="font-size: 1.5rem; font-weight: 600; color: #27ae60;">${parseInt(data.total_amount || 0).toLocaleString('ru-RU')} ₽</p>
-                </div>
-            `;
-
-            document.getElementById('modalContent').innerHTML = content;
-
-            // Добавляем список услуг
-            if (data.selected_works) {
-                try {
-                    const works = JSON.parse(data.selected_works);
-                    let worksHtml = '';
-                    works.forEach(work => {
-                        const cost = (work.price || 0) * (work.quantity || 0);
-                        worksHtml += `
-                            <div class="work-item" style="margin-bottom: 10px;">
-                                <div><strong>${work.type}</strong></div>
-                                <div>Количество: ${work.quantity} ${work.unit}</div>
-                                <div>Цена за единицу: ${work.price} ₽</div>
-                                <div>Стоимость: ${cost} ₽</div>
-                            </div>
-                        `;
-                    });
-                    document.getElementById('worksList').innerHTML = worksHtml;
-                } catch (e) {
-                    document.getElementById('worksList').innerHTML = '<p>Ошибка загрузки данных об услугах</p>';
-                }
-            }
-
-            document.getElementById('detailsModal').style.display = 'flex';
-        })
-        .catch(error => {
-            alert('Ошибка загрузки данных: ' + error);
-        });
-}
-
-function showHistory(orderId) {
-    fetch(`/admin/api/history/${orderId}?password=${PASSWORD}`)
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('historyOrderId').textContent = orderId;
-
-            if (data.length === 0) {
-                document.getElementById('historyContent').innerHTML = '<p>История изменений отсутствует</p>';
-            } else {
-                let historyHtml = '';
-                data.forEach(item => {
-                    historyHtml += `
-                        <div class="history-item">
-                            <div><strong>${item.action}</strong></div>
-                            <div>${item.details}</div>
-                            <div style="font-size: 0.9rem; color: #666; margin-top: 5px;">
-                                ${item.changed_by} • ${item.created_at}
-                            </div>
-                        </div>
-                    `;
-                });
-                document.getElementById('historyContent').innerHTML = historyHtml;
-            }
-
-            document.getElementById('historyModal').style.display = 'flex';
-        })
-        .catch(error => {
-            alert('Ошибка загрузки истории: ' + error);
-        });
-}
-
-function changeStatus(orderId, newStatus) {
-    // Получаем текущий статус заявки
-    fetch(`/admin/api/order/${orderId}?password=${PASSWORD}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert('Ошибка: ' + data.error);
-                return;
-            }
-
-            showStatusModal(orderId, data.status);
-        })
-        .catch(error => {
-            alert('Ошибка загрузки данных: ' + error);
-        });
-}
-
 function deleteOrder(orderId) {
-    if (confirm('Вы уверены, что хотите удалить эту заявку? Это действие нельзя отменить.')) {
-        fetch(`/admin/api/delete`, {
+    if (confirm(`Вы уверены, что хотите удалить заявку #${orderId}? Это действие нельзя отменить.`)) {
+        fetch('/admin/api/delete', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -193,8 +201,16 @@ function deleteOrder(orderId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                document.getElementById(`row-${orderId}`).remove();
+                // Удаляем строку из таблицы
+                const row = document.getElementById(`row-${orderId}`);
+                if (row) {
+                    row.style.backgroundColor = '#fee';
+                    setTimeout(() => row.remove(), 500);
+                }
                 alert('Заявка удалена!');
+
+                // Обновляем счетчик
+                updateStatsCount();
             } else {
                 alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
             }
@@ -205,28 +221,27 @@ function deleteOrder(orderId) {
     }
 }
 
+function updateStatsCount() {
+    // Обновляем общий счетчик заявок
+    const totalElement = document.querySelector('.header p strong:first-child');
+    if (totalElement) {
+        const currentTotal = parseInt(totalElement.textContent) || 0;
+        totalElement.textContent = Math.max(0, currentTotal - 1);
+    }
+}
+
+// В admin.js оставьте только общие функции
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.style.display = 'none';
-        // Если это динамически созданное модальное окно, удаляем его
-        if (modalId === 'statusModal') {
-            setTimeout(() => {
-                modal.remove();
-            }, 300);
+        if (modalId === 'statusModal' && modal.parentNode) {
+            setTimeout(() => modal.remove(), 300);
         }
     }
 }
 
-function getStatusText(status) {
-    const statuses = {
-        'new': 'Новая',
-        'in_progress': 'В работе',
-        'completed': 'Выполнено',
-        'cancelled': 'Отменено'
-    };
-    return statuses[status] || status;
-}
+// ... остальные общие функции ...
 
 // Закрытие модальных окон при клике вне их
 window.onclick = function(event) {
@@ -248,96 +263,9 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-// admin.js - основные функции админки
-
-// Показать детали заявки
-function showDetails(orderId) {
-    fetch(`/admin/api/order/${orderId}?password=${PASSWORD}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById('modalOrderId').textContent = orderId;
-                document.getElementById('modalContent').innerHTML = `
-                    <div class="modal-body">
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <strong>ФИО:</strong> ${data.order.full_name}
-                            </div>
-                            <div class="info-item">
-                                <strong>Телефон:</strong> <a href="tel:${data.order.phone}">${data.order.phone}</a>
-                            </div>
-                            <div class="info-item">
-                                <strong>Адрес:</strong> ${data.order.address}
-                            </div>
-                            <div class="info-item">
-                                <strong>Дата:</strong> ${data.order.created_at}
-                            </div>
-                            <div class="info-item full-width">
-                                <strong>Услуги:</strong><br>
-                                ${data.order.works_html || 'Нет данных'}
-                            </div>
-                            <div class="info-item">
-                                <strong>Сумма:</strong> ${data.order.total_amount} ₽
-                            </div>
-                            <div class="info-item">
-                                <strong>Статус:</strong> <span class="status status-${data.order.status}">${data.order.status_text}</span>
-                            </div>
-                            <div class="info-item full-width">
-                                <strong>Комментарий:</strong><br>
-                                ${data.order.comment || 'Нет комментария'}
-                            </div>
-                        </div>
-                    </div>
-                `;
-                openModal('detailsModal');
-            }
-        })
-        .catch(error => console.error('Error:', error));
-}
-
-// Показать историю изменений
-function showHistory(orderId) {
-    document.getElementById('historyOrderId').textContent = orderId;
-    document.getElementById('historyContent').innerHTML = '<p>Загрузка истории...</p>';
-    openModal('historyModal');
-
-    // Здесь можно добавить запрос к API для получения истории
-}
-
-// Удалить заявку
-function deleteOrder(orderId) {
-    if (confirm('Вы уверены, что хотите удалить эту заявку?')) {
-        fetch(`/admin/api/order/${orderId}?password=${PASSWORD}`, {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById(`row-${orderId}`).remove();
-                alert('Заявка удалена!');
-            } else {
-                alert('Ошибка при удалении: ' + data.error);
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    }
-}
-
-// Модальные окна
-function openModal(modalId) {
-    document.getElementById(modalId).style.display = 'block';
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-// Закрытие модальных окон при клике вне их
-window.onclick = function(event) {
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(modal => {
-        if (event.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
-};
+// Для совместимости с вашим HTML
+window.showStatusModal = showStatusModal;
+window.showDetails = showDetails;
+window.showHistory = showHistory;
+window.deleteOrder = deleteOrder;
+window.closeModal = closeModal;

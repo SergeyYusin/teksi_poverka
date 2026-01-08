@@ -6,11 +6,11 @@ import json
 from models.application import Application
 
 
-def export_to_csv():
+def export_to_csv(filters=None):
     """Экспортирует заявки в CSV с правильной кодировкой для Excel"""
 
-    # Получаем все заявки
-    orders = Application.get_all()
+    # Получаем заявки с фильтрами
+    orders = Application.get_all(filters) if filters else Application.get_all()
 
     # Создаем CSV в памяти
     output = StringIO()

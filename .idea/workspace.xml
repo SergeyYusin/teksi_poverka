@@ -5,12 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="152faca6-72dd-49dc-a331-75e3e789cd8e" name="Changes" comment="teksi">
-      <change afterPath="$PROJECT_DIR$/static/images/logo для сайта (1) (1).jpg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/base.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/form.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/form.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/prices.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/prices.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/applications.db" beforeDir="false" afterPath="$PROJECT_DIR$/data/applications.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/orders_log.txt" beforeDir="false" afterPath="$PROJECT_DIR$/data/orders_log.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/application.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/application.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/routes/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/routes/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/static/js/admin.js" beforeDir="false" afterPath="$PROJECT_DIR$/static/js/admin.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/admin/orders.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/admin/orders.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/exporters.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/exporters.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -259,7 +261,15 @@
       <option name="project" value="LOCAL" />
       <updated>1767884824371</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="teksi">
+      <option name="closed" value="true" />
+      <created>1767907962501</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1767907962501</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
